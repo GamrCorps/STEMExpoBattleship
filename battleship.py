@@ -31,13 +31,15 @@ class Utils(object):
                 if to_int < len(choices):
                     return to_int
                 else:
-                    error = 'ERROR: Invalid input! Input integer is not one of the avaliable choices! Please try again.'
+                    error = 'ERROR: Invalid input! Input integer is not one of \
+                        the avaliable choices! Please try again.'
                 continue
             else:
                 for i in range(len(choices)):
                     if response.strip().lower() == choices[i].strip().lower():
                         return i
-                error = 'ERROR: Invalid input! Input string is not one of the avaliable choices! Please try again.'
+                error = 'ERROR: Invalid input! Input string is not one of the \
+                    avaliable choices! Please try again.'
                 continue
 
     @staticmethod
@@ -51,16 +53,28 @@ class Utils(object):
         print('Grid Size:')
         print('\tWidth: %d' % settings['width'])
         print('\tHeight: %d' % settings['height'])
+        print('Ship Amount:')
+        print('\t5-Long Ships: %d' % settings['5_ships'])
+        print('\t4-Long Ships: %d' % settings['4_ships'])
+        print('\t3-Long Ships: %d' % settings['3_ships'])
+        print('\t2-Long Ships: %d' % settings['2_ships'])
+        print('\t1-Long Ships: %d' % settings['1_ships'])
+        print('Special Abilities:')
+        print('\tShip Moving: %s' % str(settings['allow_moves']))
+        print('\tMines: %s' % str(settings['allow_mines']))
+        if settings['allow_mines']:
+            print('\tTurns Between Mines: %d' % settings['mine_turns'])
+        print('Game Type: Player vs. %s' % settings['p_type'])
 
 
 class BattleshipGame(object):
-    def __init__(self, height, width, p_type, gm):
-        self.height = height
-        self.width = width
-        self.p1_grid = [[0] * width] * height
-        self.p2_grid = [[0] * width] * height
-        self.p_type = p_type
-        self.gm = gm
+    def __init__(self, settings):
+        self.settings = settings
+        self.height = settings['height']
+        self.width = settings['width']
+        self.p1_grid = [[0] * self.width] * self.height
+        self.p2_grid = [[0] * self.width] * self.height
+        self.p_type = settings['p_type']
 
     def print_board(self, board):
         result = ''
@@ -69,10 +83,14 @@ class BattleshipGame(object):
         print(Utils.box_string(result.strip()))
 
 
-normal_mode_preset = {'height': 10, 'width': 10, '5_ships': 1, '4_ships': 1, '3_ships': 2, '2_ships': 1, '1_ships': 0,
-                      'allow_mines': False, 'allow_moves': False, 'allow_scans': False, 'scan_turns': None}
-advanced_mode_preset = {'height': 15, 'width': 15, '5_ships': 2, '4_ships': 2, '3_ships': 2, '2_ships': 1, '1_ships': 0,
-                        'allow_mines': True, 'allow_moves': True, 'allow_scans': True, 'scan_turns': 5}
+normal_mode_preset = {'height': 10, 'width': 10, '5_ships': 1, '4_ships': 1,
+                      '3_ships': 2, '2_ships': 1, '1_ships': 0,
+                      'allow_mines': False, 'allow_moves': False,
+                      'mine_turns': None, 'p_type': 'CPU'}
+advanced_mode_preset = {'height': 15, 'width': 15, '5_ships': 2, '4_ships': 2,
+                        '3_ships': 2, '2_ships': 1, '1_ships': 0
+                        'allow_mines': True, 'allow_moves': True,
+                        'mine_turns': 5, 'p_type': 'CPU'}
 
 
 def create_game(gm):
@@ -82,39 +100,34 @@ def create_game(gm):
     else:
         Utils.box_string('Advanced Mode', print_string=True)
         settings = advanced_mode_preset
-    Utils.box_string('Current Settings', print_string=True)
-    if Utils.num_input('Would you like to change the settings?', 'Yes', 'No') == 0:
+    Utils.print_settings(settings)
+    if Utils.num_input('Would you like to change the settings?', 'No', 'Yes') == 1:
         while True:
-            setting = Utils.num_input('Settings', 'Grid Size', 'Ship Amount', 'Special Abilities', 'Exit')
+            setting = Utils.num_input('Settings', 'Grid Size', 'Ship Amount', 'Special Abilities', 'Game Type', 'Exit')
             if setting == 0:
                 settings['width'] = int(Utils.string_input('Grid Width'))
                 settings['height'] = int(Utils.string_input('Grid Height'))
             elif setting == 1:
-                settings['5_ships'] = int(Utils.string_input('5-Length Ships'))
-                settings['4_ships'] = int(Utils.string_input('4-Length Ships'))
-                settings['3_ships'] = int(Utils.string_input('3-Length Ships'))
-                settings['2_ships'] = int(Utils.string_input('2-Length Ships'))
-                settings['1_ships'] = int(Utils.string_input('1-Length Ships'))
+                settings['5_ships'] = int(Utils.string_input('5-Long Ships'))
+                settings['4_ships'] = int(Utils.string_input('4-Long Ships'))
+                settings['3_ships'] = int(Utils.string_input('3-Long Ships'))
+                settings['2_ships'] = int(Utils.string_input('2-Long Ships'))
+                settings['1_ships'] = int(Utils.string_input('1-Long Ships'))
             elif setting == 2:
                 settings['allow_moves'] = Utils.num_input('Ship Moving', 'Enable', 'Disable') == 0
                 if settings['allow_moves']:
                     settings['allow_mines'] = Utils.num_input('Mines', 'Enable', 'Disable') == 0
-                settings['allow_scans'] = Utils.num_input('Scanning', 'Enable', 'Disable') == 0
-                if settings['allow_scans']:
-                    settings['scan_turns'] = int(Utils.string_input('Turns Between Scans'))
-            Utils.box_string('Current Settings', print_string=True)
-            if setting == 3:
+                if settings['allow_mines']:
+                    settings['mine_turns'] = int(Utils.string_input('Turns Between Mines'))
+            elif setting == 3:
+                settings['p_type'] = ['CPU', 'Player'][Utils.num_input('Game Type', 'CPU', 'Player')]
+            Utils.print_settings(settings)
+            if setting == 4:
                 break
-                # bs = BattleshipGame()
+    bs = BattleshipGame(settings)
 
 
 if __name__ == '__main__':
-    # bt = BattleshipGame(13, 17, 'CPU')
-    # bt.print_board(bt.p1_grid)
-    # print(Utils.box_string('Player 1\'s Turn', min_width=bt.width*2-1))
-    # print(Utils.num_input('Which gamemode would you like to play?', 'Versus Computer', 'Versus Player', 'Extreme Mode'
-
-    # Menu
     Utils.box_string('Welcome to Battleship!', print_string=True)
     gamemode = Utils.num_input('Which gamemode do you want to play?', 'Normal', 'Advanced')
     bs = create_game(gamemode)
