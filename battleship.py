@@ -3,6 +3,10 @@
 # Notes:
 #   [row][column]
 #   Ships: numeric  [5long][4long][3long][2long][1long]
+
+# TODO:
+#   Make sure not too many ships can be on board.
+
 import re
 
 
