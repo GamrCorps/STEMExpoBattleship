@@ -5,6 +5,7 @@ from re import fullmatch
 from time import sleep
 
 # Default game presets.
+testing_preset = {'height': 10, 'width': 10, '5_ships': 0, '4_ships': 0, '3_ships': 0, '2_ships': 1, '1_ships': 0, 'allow_mines': False, 'allow_moves': False, 'mine_turns': None, 'p_type': 'Player'}
 normal_mode_preset = {'height': 10, 'width': 10, '5_ships': 1, '4_ships': 1, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': False, 'allow_moves': False, 'mine_turns': None, 'p_type': 'CPU'}
 advanced_mode_preset = {'height': 15, 'width': 15, '5_ships': 2, '4_ships': 2, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 5, 'p_type': 'CPU'}
 
@@ -278,7 +279,45 @@ class BattleshipGame(object):
         # Miscellaneous attributes.
         self.p2_cpu = settings['p_type'] == 'CPU'
         self.turn = 0
-        self.stage = 0  # Stages: 0=Setup, 1=Play, 2=Post
+
+    def update_board(self, player):
+        """
+        Update both grids for a player.
+
+        Adds new ships and puts them into the right locations.
+
+        Parameters
+        ----------
+        player : int
+            Determines which player's grids to print. Zero-indexed.
+        """
+        # Place ships into grid, if not already.
+        if player == 0:  # Player 1
+            board = self.p1_grid
+            for ship in self.p1_ships:
+                if not ship['setup']:
+                    if ship['direction'] == 0:
+                        for i in range(ship['size']):
+                            if board[ship['y_pos']][ship['x_pos'] + i] == 0:
+                                board[ship['y_pos']][ship['x_pos'] + i] = ship['num'] + 1
+                    else:
+                        for j in range(ship['size']):
+                            if board[ship['y_pos'] + j][ship['x_pos']] == 0:
+                                board[ship['y_pos'] + j][ship['x_pos']] = ship['num'] + 1
+                    ship['setup'] = True
+        else:  # Player 2
+            board = self.p2_grid
+            for ship in self.p2_ships:
+                if not ship['setup']:
+                    if ship['direction'] == 0:
+                        for i in range(ship['size']):
+                            if board[ship['y_pos']][ship['x_pos'] + i] == 0:
+                                board[ship['y_pos']][ship['x_pos'] + i] = ship['num'] + 1
+                    else:
+                        for j in range(ship['size']):
+                            if board[ship['y_pos'] + j][ship['x_pos']] == 0:
+                                board[ship['y_pos'] + j][ship['x_pos']] = ship['num'] + 1
+                    ship['setup'] = True
 
     def print_board(self, player):
         """
@@ -297,33 +336,19 @@ class BattleshipGame(object):
             Same as the string that is printed.
         """
         # Characters to use while printing.
-        characters = '.' + letters + '*O#'  # 0:Null, 1-26:Ships, 27:Hit, 28:Miss, 29:Mine
+        characters = '.' + letters + '*0#'  # 0:Null, 1-26:Ships, 27:Hit, 28:Miss, 29:Mine
 
-        # Place ships into grid, if not already.
+        # Update board.
+        self.update_board(player)
+
+        # Get boards to print.
         if player == 0:  # Player 1
             board = self.p1_grid
             board_2 = self.p1_grid_2
-            for ship in self.p1_ships:
-                if ship['direction'] == 0:
-                    for i in range(ship['size']):
-                        if board[ship['y_pos']][ship['x_pos'] + i] == 0:
-                            board[ship['y_pos']][ship['x_pos'] + i] = ship['num'] + 1
-                else:
-                    for j in range(ship['size']):
-                        if board[ship['y_pos'] + j][ship['x_pos']] == 0:
-                            board[ship['y_pos'] + j][ship['x_pos']] = ship['num'] + 1
         else:  # Player 2
             board = self.p2_grid
             board_2 = self.p2_grid_2
-            for ship in self.p2_ships:
-                if ship['direction'] == 0:
-                    for i in range(ship['size']):
-                        if board[ship['y_pos']][ship['x_pos'] + i] == 0:
-                            board[ship['y_pos']][ship['x_pos'] + i] = ship['num'] + 1
-                else:
-                    for j in range(ship['size']):
-                        if board[ship['y_pos'] + j][ship['x_pos']] == 0:
-                            board[ship['y_pos'] + j][ship['x_pos']] = ship['num'] + 1
+
         # Build header.
         result = '    +' + '-' * (self.width * 2 + 1) + '+' + '-' * (self.width * 2 + 1) + '+\n'
         result += '    |' + 'Your Board'.center(self.width * 2 + 1) + '|' + 'Their Board'.center(self.width * 2 + 1) + '|\n'
@@ -398,9 +423,9 @@ class BattleshipGame(object):
 
         # Create the ship's dictionary and append it to the player's ship list.
         if player == 0:
-            self.p1_ships.append({'num': count, 'size': size, 'x_pos': pos[1], 'y_pos': pos[0], 'direction': direction})
+            self.p1_ships.append({'num': count, 'size': size, 'x_pos': pos[1], 'y_pos': pos[0], 'direction': direction, 'setup': False, 'health': size, 'hits': []})
         else:
-            self.p2_ships.append({'num': count, 'size': size, 'x_pos': pos[1], 'y_pos': pos[0], 'direction': direction})
+            self.p2_ships.append({'num': count, 'size': size, 'x_pos': pos[1], 'y_pos': pos[0], 'direction': direction, 'setup': False, 'health': size, 'hits': []})
 
         return None
 
@@ -445,13 +470,125 @@ class BattleshipGame(object):
         # Return updated cumulative ship total.
         return count
 
+    def p1_turn(self):
+        """
+        Execute a turn for Player 1.
+
+        Handles input and output for the turn and updates both player's grids.
+
+        Returns
+        -------
+        bool
+            True if game ends after the move, False otherwise
+        """
+        Utils.box_string('Player 1\'s Turn', min_width=self.width * 4 + 5, print_string=True)
+
+        # Test if Player 2 is a human.
+        if not self.p2_cpu:
+            # Alert Player 2 to look away.
+            Utils.box_string('Player 2, please look away.', min_width=self.width * 4 + 5, print_string=True)
+            sleep(5)
+
+        self.print_board(0)
+
+        # Determine input method based on possible actions.
+        if self.settings['allow_moves']:
+            pass  # TODO: FINISH LOGIC
+        else:
+            error = ''
+            while True:
+                y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error + '\nWhere do you want to fire?').strip())
+                if self.p1_grid_2[y_pos][x_pos] != 0:
+                    error = 'ERROR: You already guessed there!'
+                    continue
+                if self.p2_grid[y_pos][x_pos] != 0:
+                    Utils.box_string('Direct Hit!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update ship.
+                    self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] -= 1
+                    self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['hits'].append((y_pos, x_pos))
+
+                    # Test if ship still stands.
+                    if self.p1_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] == 0:
+                        Utils.box_string('You sunk a ship!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update grid.
+                    self.p1_grid_2[y_pos][x_pos] = 27
+                    self.p2_grid[y_pos][x_pos] = 27
+                else:
+                    Utils.box_string('Miss!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update grid.
+                    self.p1_grid_2[y_pos][x_pos] = 28
+                    self.p2_grid[y_pos][x_pos] = 28
+                break
+
+        # Detect if game is over.
+        return sum([x['health'] for x in self.p2_ships]) == 0
+
+    def p2_turn(self):
+        """
+        Execute a turn for Player 2.
+
+        Handles input and output for the turn and updates both player's grids.
+
+        Returns
+        -------
+        bool
+            True if game ends after the move, False otherwise
+        """
+        Utils.box_string('Player 2\'s Turn', min_width=self.width * 4 + 5, print_string=True)
+
+        # Test if Player 2 is a human.
+        if not self.p2_cpu:
+            # Alert Player 2 to look away.
+            Utils.box_string('Player 1, please look away.', min_width=self.width * 4 + 5, print_string=True)
+            sleep(5)
+
+        self.print_board(1)
+
+        # Determine input method based on possible actions.
+        if self.settings['allow_moves']:
+            pass  # TODO: FINISH LOGIC
+        else:
+            error = ''
+            while True:
+                y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error + '\nWhere do you want to fire?').strip())
+                if self.p2_grid_2[y_pos][x_pos] != 0:
+                    error = 'ERROR: You already guessed there!'
+                    continue
+                if self.p1_grid[y_pos][x_pos] != 0:
+                    Utils.box_string('Direct Hit!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update ship.
+                    self.p1_ships[self.p1_grid[y_pos][x_pos] - 1]['health'] -= 1
+                    self.p1_ships[self.p1_grid[y_pos][x_pos] - 1]['hits'].append((y_pos, x_pos))
+
+                    # Test if ship still stands.
+                    if self.p2_ships[self.p1_grid[y_pos][x_pos] - 1]['health'] == 0:
+                        Utils.box_string('You sunk a ship!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update grid.
+                    self.p2_grid_2[y_pos][x_pos] = 27
+                    self.p1_grid[y_pos][x_pos] = 27
+                else:
+                    Utils.box_string('Miss!', min_width=self.width * 4 + 5, print_string=True)
+
+                    # Update grid.
+                    self.p2_grid_2[y_pos][x_pos] = 28
+                    self.p1_grid[y_pos][x_pos] = 28
+                break
+
+        # Detect if game is over.
+        return sum([x['health'] for x in self.p1_ships]) == 0
+
     def start_game(self):
         """
         Start a new game.
 
         Starts a game with the settings provided in the constructor.
         All game code is contained here, with relevant helper methods also called here.
-        Every game has three stages: Setup, Play, and Post-Play/Cleanup.
+        Every game has two stages: Setup and Play.
 
         Returns
         -------
@@ -461,6 +598,8 @@ class BattleshipGame(object):
         # Setup Phase:
         # In this stage, both players choose where to place their ships.
         Utils.box_string('Setup Phase', min_width=self.width * 4 + 5, print_string=True)
+
+        Utils.box_string('Player 1\'s Turn', min_width=self.width * 4 + 5, print_string=True)
 
         # Test if Player 2 is a human.
         if not self.p2_cpu:
@@ -479,6 +618,9 @@ class BattleshipGame(object):
             # TODO: SETUP CPU SHIPS
             pass
         else:  # Player 2 is a Human
+
+            Utils.box_string('Player 2\'s Turn', min_width=self.width * 4 + 5, print_string=True)
+
             # Alert Player 1 to look away.
             Utils.box_string('Player 1, please look away.', min_width=self.width * 4 + 5, print_string=True)
             sleep(5)
@@ -489,10 +631,31 @@ class BattleshipGame(object):
             for i in range(5):
                 p2_ship_count = self.setup_ships(i + 1, 1, p2_ship_count)
 
-        # Update stage number.
-        self.stage = 1
-        # TODO: PLAY STAGE
-        # TODO: POST-PLAY STAGE
+        # Update both boards, just in case.
+        self.update_board(0)
+        self.update_board(1)
+
+        # Play Phase:
+        # In this stage, the game itself is played.
+        Utils.box_string('Play Phase', min_width=self.width * 4 + 5, print_string=True)
+
+        # Main game loop.
+        winner = None
+        while True:
+            if self.turn % 2 == 0:
+                if self.p1_turn():
+                    winner = 1
+                    break
+            else:
+                if self.p2_turn():
+                    winner = 2
+                    break
+            self.turn += 1
+
+        # Print winner.
+        Utils.box_string('Player %d won!' % winner, min_width=self.width * 4 + 5, print_string=True)
+
+        return winner
 
 
 def create_game(gm):
@@ -518,9 +681,12 @@ def create_game(gm):
     if gm == 0:
         Utils.box_string('Normal Mode', print_string=True)
         settings = normal_mode_preset
-    else:
+    elif gm == 1:
         Utils.box_string('Advanced Mode', print_string=True)
         settings = advanced_mode_preset
+    else:  # TODO: REMOVE TESTING MODE
+        Utils.box_string('Testing Mode', print_string=True)
+        settings = testing_preset
 
     # Print current settings.
     Utils.print_settings(settings)
@@ -579,8 +745,28 @@ def create_game(gm):
 
 if __name__ == '__main__':
     Utils.box_string('Welcome to Battleship!', print_string=True)
-    gamemode = Utils.num_input('Which gamemode do you want to play?', 'Normal', 'Advanced')
-    bs = create_game(gamemode)
-    bs.start_game()
+
+    settings = None
+    while True:
+        # Create game.
+        gamemode = Utils.num_input('Which gamemode do you want to play?', 'Normal', 'Advanced', 'testing')  # TODO: REMOVE TESTING MODE
+        if settings is not None:
+            bs = BattleshipGame(settings)
+        else:
+            bs = create_game(gamemode)
+            settings = bs.settings
+
+        # Play game.
+        bs.start_game()
+
+        # Determine if the game should be played again.
+        response = Utils.num_input('Do you want to play again?', 'Yes [Same Settings]', 'Yes [Different Settings]', 'No')
+        if response == 0:
+            pass
+        elif response == 1:
+            settings = None
+        else:
+            break
+
 
 # TODO: SWITCH %-FORMATTING TO STRING.FORMAT
