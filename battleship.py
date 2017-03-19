@@ -3,9 +3,10 @@
 from string import ascii_uppercase
 from re import fullmatch
 from time import sleep
+from random import Random
 
 # Default game presets.
-testing_preset = {'height': 10, 'width': 10, '5_ships': 0, '4_ships': 0, '3_ships': 0, '2_ships': 2, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 2, 'p_type': 'Player', 'player_timer': 0}
+testing_preset = {'height': 10, 'width': 10, '5_ships': 0, '4_ships': 0, '3_ships': 0, '2_ships': 2, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 2, 'p_type': 'CPU', 'player_timer': 0}
 normal_mode_preset = {'height': 10, 'width': 10, '5_ships': 1, '4_ships': 1, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': False, 'allow_moves': False, 'mine_turns': None, 'p_type': 'CPU', 'player_timer': 5}
 advanced_mode_preset = {'height': 15, 'width': 15, '5_ships': 2, '4_ships': 2, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 5, 'p_type': 'CPU', 'player_timer': 5}
 
@@ -512,7 +513,11 @@ class BattleshipGame(object):
                 while True:
                     y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error+'\nWhere do you want to fire?').strip())
 
-                    if True in [(y_pos, x_pos) in self.p2_ships[x]['hits'] for x in range(len(self.p2_ships))]:
+                    if True in [(y_pos, x_pos) in self.p2_ships[x]['hits'] for x in range(len(self.p2_ships))] or self.p1_grid_2[y_pos][x_pos] > 26:
+                        error = 'ERROR: You already guessed there!'
+                        continue
+                        
+                    if self.p2_grid[y_pos][x_pos] > 26:
                         error = 'ERROR: You already guessed there!'
                         continue
 
@@ -545,38 +550,41 @@ class BattleshipGame(object):
                     move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                     ship = self.p1_ships[ship_num]
                     error = ''
-                    if move_direction < 2:  # Up or down.
-                        true_dir = -1 if move_direction == 0 else 1
-                        board = self.p1_grid
-                        if ship['direction'] == 0:
-                            for i in range(ship['size']):
-                                if board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        else:
-                            for j in range(ship['size']):
-                                if board[ship['y_pos'] + j + true_dir][ship['x_pos']] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + j] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        if error == '':
-                            self.p1_ships[ship_num]['setup'] = False
-                            self.p1_ships[ship_num]['y_pos'] += true_dir
-                            self.p1_move = 'Player 1 just moved a ship ' + ('up!' if move_direction == 0 else 'down!')
-                            break
-                    else:  # Left or right.
-                        true_dir = -1 if move_direction == 2 else 1
-                        board = self.p1_grid
-                        if ship['direction'] == 0:
-                            for i in range(ship['size']):
-                                if board[ship['y_pos']][ship['x_pos'] + i + true_dir] != 0 and board[ship['y_pos']][ship['x_pos'] + i + true_dir] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        else:
-                            for j in range(ship['size']):
-                                if board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != 0 and board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        if error == '':
-                            self.p1_ships[ship_num]['setup'] = False
-                            self.p1_ships[ship_num]['x_pos'] += true_dir
-                            self.p1_move = 'Player 1 just moved a ship to the ' + ('left!' if move_direction == 2 else 'right!')
-                            break
+                    try:
+                        if move_direction < 2:  # Up or down.
+                            true_dir = -1 if move_direction == 0 else 1
+                            board = self.p1_grid
+                            if ship['direction'] == 0:
+                                for i in range(ship['size']):
+                                    if board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != ship_num + 1 or ship['y_pos'] + true_dir < 0 or ship['y_pos'] >= self.height:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            else:
+                                for j in range(ship['size']):
+                                    if board[ship['y_pos'] + j + true_dir][ship['x_pos']] != 0 and board[ship['y_pos'] + j + true_dir][ship['x_pos']] != ship_num + 1 or ship['y_pos'] + j + true_dir < 0 or ship['y_pos'] >= self.height:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            if error == '':
+                                self.p1_ships[ship_num]['setup'] = False
+                                self.p1_ships[ship_num]['y_pos'] += true_dir
+                                self.p1_move = 'Player 1 just moved a ship ' + ('up!' if move_direction == 0 else 'down!')
+                                break
+                        else:  # Left or right.
+                            true_dir = -1 if move_direction == 2 else 1
+                            board = self.p1_grid
+                            if ship['direction'] == 0:
+                                for i in range(ship['size']):
+                                    if board[ship['y_pos']][ship['x_pos'] + i + true_dir] != 0 and board[ship['y_pos']][ship['x_pos'] + i + true_dir] != ship_num + 1 or ship['x_pos'] + i + true_dir < 0 or ship['x_pos'] >= self.width:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            else:
+                                for j in range(ship['size']):
+                                    if board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != 0 and board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != ship_num + 1 or ship['x_pos'] + true_dir < 0 or ship['x_pos'] >= self.width:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            if error == '':
+                                self.p1_ships[ship_num]['setup'] = False
+                                self.p1_ships[ship_num]['x_pos'] += true_dir
+                                self.p1_move = 'Player 1 just moved a ship to the ' + ('left!' if move_direction == 2 else 'right!')
+                                break
+                    except IndexError:
+                        error = 'ERROR: You cannot move your ship there!'
 
                 for i in range(self.height):
                     for j in range(self.width):
@@ -613,6 +621,10 @@ class BattleshipGame(object):
                 y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error + '\nWhere do you want to fire?').strip())
 
                 if self.p1_grid_2[y_pos][x_pos] != 0:
+                    error = 'ERROR: You already guessed there!'
+                    continue
+                    
+                if self.p2_grid[y_pos][x_pos] > 26:
                     error = 'ERROR: You already guessed there!'
                     continue
 
@@ -676,7 +688,11 @@ class BattleshipGame(object):
                 while True:
                     y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error+'\nWhere do you want to fire?').strip())
 
-                    if True in [(y_pos, x_pos) in self.p1_ships[x]['hits'] for x in range(len(self.p1_ships))]:
+                    if True in [(y_pos, x_pos) in self.p1_ships[x]['hits'] for x in range(len(self.p1_ships))] or self.p2_grid_2[y_pos][x_pos] > 26:
+                        error = 'ERROR: You already guessed there!'
+                        continue
+                        
+                    if self.p1_grid[y_pos][x_pos] > 26:
                         error = 'ERROR: You already guessed there!'
                         continue
 
@@ -709,38 +725,41 @@ class BattleshipGame(object):
                     move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                     ship = self.p2_ships[ship_num]
                     error = ''
-                    if move_direction < 2:  # Up or down.
-                        true_dir = -1 if move_direction == 0 else 1
-                        board = self.p2_grid
-                        if ship['direction'] == 0:
-                            for i in range(ship['size']):
-                                if board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        else:
-                            for j in range(ship['size']):
-                                if board[ship['y_pos'] + j + true_dir][ship['x_pos']] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + j] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        if error == '':
-                            self.p2_ships[ship_num]['setup'] = False
-                            self.p2_ships[ship_num]['y_pos'] += true_dir
-                            self.p2_move = 'Player 2 just moved a ship ' + ('up!' if move_direction == 0 else 'down!')
-                            break
-                    else:  # Left or right.
-                        true_dir = -1 if move_direction == 2 else 1
-                        board = self.p2_grid
-                        if ship['direction'] == 0:
-                            for i in range(ship['size']):
-                                if board[ship['y_pos']][ship['x_pos'] + i + true_dir] != 0 and board[ship['y_pos']][ship['x_pos'] + i + true_dir] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        else:
-                            for j in range(ship['size']):
-                                if board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != 0 and board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != ship_num + 1:
-                                    error = 'ERROR: You cannot move your ship there!'
-                        if error == '':
-                            self.p2_ships[ship_num]['setup'] = False
-                            self.p2_ships[ship_num]['x_pos'] += true_dir
-                            self.p2_move = 'Player 2 just moved a ship to the ' + ('left!' if move_direction == 2 else 'right!')
-                            break
+                    try:
+                        if move_direction < 2:  # Up or down.
+                            true_dir = -1 if move_direction == 0 else 1
+                            board = self.p2_grid
+                            if ship['direction'] == 0:
+                                for i in range(ship['size']):
+                                    if board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != 0 and board[ship['y_pos'] + true_dir][ship['x_pos'] + i] != ship_num + 1 or ship['y_pos'] + true_dir < 0 or ship['y_pos'] >= self.height:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            else:
+                                for j in range(ship['size']):
+                                    if board[ship['y_pos'] + j + true_dir][ship['x_pos']] != 0 and board[ship['y_pos'] + j + true_dir][ship['x_pos'] ] != ship_num + 1 or ship['y_pos'] + j + true_dir < 0 or ship['y_pos'] >= self.height:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            if error == '':
+                                self.p2_ships[ship_num]['setup'] = False
+                                self.p2_ships[ship_num]['y_pos'] += true_dir
+                                self.p2_move = 'Player 2 just moved a ship ' + ('up!' if move_direction == 0 else 'down!')
+                                break
+                        else:  # Left or right.
+                            true_dir = -1 if move_direction == 2 else 1
+                            board = self.p2_grid
+                            if ship['direction'] == 0:
+                                for i in range(ship['size']):
+                                    if board[ship['y_pos']][ship['x_pos'] + i + true_dir] != 0 and board[ship['y_pos']][ship['x_pos'] + i + true_dir] != ship_num + 1 or ship['x_pos'] + i + true_dir < 0 or ship['x_pos'] >= self.width:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            else:
+                                for j in range(ship['size']):
+                                    if board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != 0 and board[ship['y_pos'] + j][ship['x_pos'] + true_dir] != ship_num + 1 or ship['x_pos'] + true_dir < 0 or ship['x_pos'] >= self.width:
+                                        error = 'ERROR: You cannot move your ship there!'
+                            if error == '':
+                                self.p2_ships[ship_num]['setup'] = False
+                                self.p2_ships[ship_num]['x_pos'] += true_dir
+                                self.p2_move = 'Player 2 just moved a ship to the ' + ('left!' if move_direction == 2 else 'right!')
+                                break
+                    except IndexError:
+                        error = 'ERROR: You cannot move your ship there!'
 
                 for i in range(self.height):
                     for j in range(self.width):
@@ -777,6 +796,10 @@ class BattleshipGame(object):
                 y_pos, x_pos = Utils.grid_pos_input(self.height, self.width, question=(error + '\nWhere do you want to fire?').strip())
 
                 if self.p2_grid_2[y_pos][x_pos] != 0:
+                    error = 'ERROR: You already guessed there!'
+                    continue
+                
+                if self.p1_grid[y_pos][x_pos] > 26:
                     error = 'ERROR: You already guessed there!'
                     continue
 
@@ -838,10 +861,28 @@ class BattleshipGame(object):
 
         # Test if Player 2 is a human.
         if self.p2_cpu:  # Player 2 is Not a Human
-            # TODO: SETUP CPU SHIPS
-            pass
-        else:  # Player 2 is a Human
+            p2_ship_count = 0
+            rng = Random()
+            for size in range(1, 6):
+                count = 0
+                # Setup number of ships based on value defined in game settings.
+                for i in range(self.settings['%d_ships' % size]):
+                    while True:
+                        # Generate ship details.
+                        pos = (rng.randrange(self.height), rng.randrange(self. width))
+                        direction = rng.randrange(2)
 
+                        # Determine if the ship needs to be randomized again.
+                        error = self.setup_ship(pos, direction, 1, p2_ship_count + count, size)
+                        if error is None:
+                            print('Placed ship ' + str(p2_ship_count + count) + ' at ' + str(pos) + ' with direction ' + str(direction) + ' with size ' + str(size))
+                            break
+                    count += 1
+
+                # Update cumulative ship total.
+                p2_ship_count += count
+
+        else:  # Player 2 is a human
             Utils.box_string('Player 2\'s Turn', min_width=self.width * 4 + 5, print_string=True)
 
             # Alert Player 1 to look away.
@@ -854,7 +895,7 @@ class BattleshipGame(object):
             for i in range(5):
                 p2_ship_count = self.setup_ships(i + 1, 1, p2_ship_count)
 
-        # Update both boards, just in case.
+        # Update both boards.
         self.update_board(0)
         self.update_board(1)
 
@@ -865,7 +906,7 @@ class BattleshipGame(object):
         # Main game loop.
         winner = None
         while True:
-            if self.turn % 10 == 0:
+            if self.turn % (self.settings['mine_turns'] * 2) == 0:
                 self.p1_mines += 1
                 self.p2_mines += 1
 
@@ -996,6 +1037,3 @@ if __name__ == '__main__' or __name__ == 'builtins':
             passed_settings = None
         else:
             break
-
-
-# TODO: SWITCH %-FORMATTING TO STRING.FORMAT

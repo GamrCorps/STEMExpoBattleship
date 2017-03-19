@@ -1,0 +1,5 @@
+TODO
+
+CPU turns
+Swap all %-formatting to string.format
+Remove testing mode
