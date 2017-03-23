@@ -41,7 +41,6 @@ class Utils(object):
         -------
         str
             Input string with a box around it.
-
         """
         # Parameters.
         split_string = string.split('\n')
@@ -203,7 +202,7 @@ class Utils(object):
         while True:
             # Print the question and ask for input.
             Utils.box_string((error + '\n' + question).strip(), print_string=True)
-            loc = input()
+            loc = input().upper()
 
             # Test if input is a valid coordinate and is in the grid.
             if not fullmatch(r'[A-Z][1-2]?[0-9]', loc):
@@ -359,7 +358,7 @@ class BattleshipGame(object):
 
         # Build header.
         result = '    +' + '-' * (self.width * 2 + 1) + '+' + '-' * (self.width * 2 + 1) + '+\n'
-        result += '    |' + 'Your Board'.center(self.width * 2 + 1) + '|' + 'Their Board'.center(self.width * 2 + 1) + '|\n'
+        result += '    |' + 'Your Board'.center(self.width * 2 + 1) + '|' + 'Enemy Board'.center(self.width * 2 + 1) + '|\n'
         result += '    +' + '-' * (self.width * 2 + 1) + '+' + '-' * (self.width * 2 + 1) + '+\n'
 
         # Build x-coordinate reference.
@@ -499,6 +498,8 @@ class BattleshipGame(object):
             sleep(self.settings['player_timer'])
 
         self.print_board(0)
+
+        # Notify player if a ship moved.
         if self.p2_move != '':
             Utils.box_string('Note: ' + self.p2_move, min_width=self.width * 4 + 5, print_string=True)
 
@@ -591,6 +592,8 @@ class BattleshipGame(object):
                         if board[i][j] == ship_num + 1:
                             board[i][j] = 0
 
+                self.p1_ships[ship_num]['hits'] = []
+
                 self.update_board(0)
             else:  # Place Mine
                 error = ''
@@ -636,7 +639,7 @@ class BattleshipGame(object):
                     self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['hits'].append((y_pos, x_pos))
 
                     # Test if ship still stands.
-                    if self.p1_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] == 0:
+                    if self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] == 0:
                         Utils.box_string('You sunk a ship!', min_width=self.width * 4 + 5, print_string=True)
 
                     # Update grid.
@@ -704,7 +707,7 @@ class BattleshipGame(object):
                         self.p1_ships[self.p1_grid[y_pos][x_pos] - 1]['hits'].append((y_pos, x_pos))
 
                         # Test if ship still stands.
-                        if self.p2_ships[self.p1_grid[y_pos][x_pos] - 1]['health'] == 0:
+                        if self.p1_ships[self.p1_grid[y_pos][x_pos] - 1]['health'] == 0:
                             Utils.box_string('You sunk a ship!', min_width=self.width * 4 + 5, print_string=True)
 
                         # Update grid.
@@ -765,6 +768,8 @@ class BattleshipGame(object):
                     for j in range(self.width):
                         if board[i][j] == ship_num + 1:
                             board[i][j] = 0
+
+                self.p2_ships[ship_num]['hits'] = []
 
                 self.update_board(1)
             else:  # Place Mine
@@ -906,7 +911,7 @@ class BattleshipGame(object):
         # Main game loop.
         winner = None
         while True:
-            if self.turn % (self.settings['mine_turns'] * 2) == 0:
+            if self.settings['mine_turns'] is not None and self.turn % (self.settings['mine_turns'] * 2) == 0:
                 self.p1_mines += 1
                 self.p2_mines += 1
 
