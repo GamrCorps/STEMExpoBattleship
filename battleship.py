@@ -6,12 +6,15 @@ from time import sleep
 from random import Random
 
 # Default game presets.
-testing_preset = {'height': 10, 'width': 10, '5_ships': 0, '4_ships': 0, '3_ships': 0, '2_ships': 2, '1_ships': 0, 'allow_mines': False, 'allow_moves': False, 'mine_turns': None, 'p_type': 'CPU', 'player_timer': 5}
+testing_preset = {'height': 10, 'width': 10, '5_ships': 0, '4_ships': 0, '3_ships': 0, '2_ships': 2, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 5, 'p_type': 'Player', 'player_timer': 0}
 normal_mode_preset = {'height': 10, 'width': 10, '5_ships': 1, '4_ships': 1, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': False, 'allow_moves': False, 'mine_turns': None, 'p_type': 'CPU', 'player_timer': 5}
 advanced_mode_preset = {'height': 15, 'width': 15, '5_ships': 2, '4_ships': 2, '3_ships': 2, '2_ships': 1, '1_ships': 0, 'allow_mines': True, 'allow_moves': True, 'mine_turns': 5, 'p_type': 'CPU', 'player_timer': 5}
 
 # Miscellaneous global values.
 letters = ascii_uppercase
+
+# Global user-variables.
+PAD_AMOUNT = 50
 
 
 class Utils(object):
@@ -491,6 +494,7 @@ class BattleshipGame(object):
         bool
             True if game ends after the move, False otherwise
         """
+        print('\n' * PAD_AMOUNT)  # Pad previous output.
         Utils.box_string('Player 1\'s Turn', min_width=self.width * 4 + 5, print_string=True)
         self.p1_move = ''
 
@@ -509,9 +513,9 @@ class BattleshipGame(object):
         # Determine input method based on possible actions.
         if self.settings['allow_moves']:
             if self.settings['allow_mines'] and self.p1_mines > 0:
-                action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Place a Mine')
+                action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Clear Misses', 'Place a Mine')
             else:
-                action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship')
+                action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Clear Misses')
             if action == 0:  # Fire Missile
                 error = ''
                 while True:
@@ -533,7 +537,7 @@ class BattleshipGame(object):
                         self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['hits'].append((y_pos, x_pos))
 
                         # Test if ship still stands.
-                        if self.p1_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] == 0:
+                        if self.p2_ships[self.p2_grid[y_pos][x_pos] - 1]['health'] == 0:
                             Utils.box_string('You sunk a ship!', min_width=self.width * 4 + 5, print_string=True)
 
                         # Update grid.
@@ -598,6 +602,12 @@ class BattleshipGame(object):
                 self.p1_ships[ship_num]['hits'] = []
 
                 self.update_board(0)
+            elif action == 2:  # Clear Misses
+                for i in range(self.height):
+                    for j in range(self.width):
+                        if self.p1_grid_2[i][j] == 28:
+                            self.p1_grid_2[i][j] = 0
+                return self.p1_turn()
             else:  # Place Mine
                 error = ''
                 while True:
@@ -656,6 +666,10 @@ class BattleshipGame(object):
                     self.p2_grid[y_pos][x_pos] = 28
                 break
 
+        # End turn.
+        Utils.box_string('Your turn is now over.', print_string=True)
+        sleep(self.settings['player_timer'])
+
         # Detect if game is over.
         return sum([x['health'] for x in self.p2_ships]) == 0
 
@@ -670,6 +684,7 @@ class BattleshipGame(object):
         bool
             True if game ends after the move, False otherwise
         """
+        print('\n' * PAD_AMOUNT)  # Pad previous output.
         Utils.box_string('Player 2\'s Turn', min_width=self.width * 4 + 5, print_string=True)
         self.p2_move = ''
 
@@ -686,9 +701,9 @@ class BattleshipGame(object):
             # Determine input method based on possible actions.
             if self.settings['allow_moves']:
                 if self.settings['allow_mines'] and self.p2_mines > 0:
-                    action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Place a Mine')
+                    action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Clear Misses', 'Place a Mine')
                 else:
-                    action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship')
+                    action = Utils.num_input('What do you want to do?', 'Fire Missile', 'Move a Ship', 'Clear Misses')
                 if action == 0:  # Fire Missile
                     error = ''
                     while True:
@@ -775,6 +790,12 @@ class BattleshipGame(object):
                     self.p2_ships[ship_num]['hits'] = []
 
                     self.update_board(1)
+                elif action == 2:  # Clear Misses
+                    for i in range(self.height):
+                        for j in range(self.width):
+                            if self.p2_grid_2[i][j] == 28:
+                                self.p2_grid_2[i][j] = 0
+                    return self.p2_turn()
                 else:  # Place Mine
                     error = ''
                     while True:
@@ -859,6 +880,10 @@ class BattleshipGame(object):
                     self.p1_grid[y_pos][x_pos] = 28
                 break
 
+        # End turn.
+        Utils.box_string('Your turn is now over.', print_string=True)
+        sleep(self.settings['player_timer'])
+
         # Detect if game is over.
         return sum([x['health'] for x in self.p1_ships]) == 0
 
@@ -877,6 +902,7 @@ class BattleshipGame(object):
         """
         # Setup Phase:
         # In this stage, both players choose where to place their ships.
+        print('\n' * PAD_AMOUNT)  # Pad previous output.
         Utils.box_string('Setup Phase', min_width=self.width * 4 + 5, print_string=True)
 
         Utils.box_string('Player 1\'s Turn', min_width=self.width * 4 + 5, print_string=True)
@@ -923,6 +949,7 @@ class BattleshipGame(object):
                 p2_ship_count += count
 
         else:  # Player 2 is a human
+            print('\n' * PAD_AMOUNT)  # Pad previous output.
             Utils.box_string('Player 2\'s Turn', min_width=self.width * 4 + 5, print_string=True)
 
             # Alert Player 1 to look away.
@@ -985,6 +1012,8 @@ def create_game(gm):
     BattleshipGame
         Game instance with user-chosen settings.
     """
+    print('\n' * PAD_AMOUNT)  # Pad previous output.
+
     # Choose and print default settings.
     if gm == 0:
         Utils.box_string('Normal Mode', print_string=True)
@@ -1037,8 +1066,7 @@ def create_game(gm):
                 settings['allow_moves'] = Utils.num_input('Ship Moving', 'Enable', 'Disable') == 0
                 if settings['allow_moves']:
                     settings['allow_mines'] = Utils.num_input('Mines', 'Enable', 'Disable') == 0
-                if settings['allow_mines']:
-                    settings['mine_turns'] = int(Utils.string_input('Turns Between Mines'))
+                settings['mine_turns'] = int(Utils.string_input('Turns Between Mines', condition=r'\d+')) if settings['allow_mines'] else None
 
             elif setting == 3:  # Game Type
                 # Take game type.
@@ -1054,6 +1082,7 @@ def create_game(gm):
 
 # Test if code is run independently or on repl.it.
 if __name__ == '__main__' or __name__ == 'builtins':
+    print('\n' * PAD_AMOUNT)  # Pad previous output.
     Utils.box_string('Welcome to Battleship!', print_string=True)
 
     passed_settings = None
