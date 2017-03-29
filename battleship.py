@@ -555,11 +555,11 @@ class BattleshipGame(object):
                 ship_num = -1
                 while True:
                     ship_num = letters.index(Utils.string_input((error + '\nWhich ship do you want to move?').strip(), condition=('[A-%sa-%s]' % (letters[len(self.p1_ships) - 1], letters[len(self.p1_ships) - 1].lower()))).upper())
-                    move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                     ship = self.p1_ships[ship_num]
                     if ship['health'] == 0:
                         error = 'ERROR: That ship is sunk!'
                         continue
+                    move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                     error = ''
                     try:
                         if move_direction < 2:  # Up or down.
@@ -821,11 +821,11 @@ class BattleshipGame(object):
                     ship_num = -1
                     while True:
                         ship_num = letters.index(Utils.string_input((error + '\nWhich ship do you want to move?').strip(), condition=('[A-%sa-%s]' % (letters[len(self.p1_ships) - 1], letters[len(self.p1_ships) - 1].lower()))).upper())
-                        move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                         ship = self.p2_ships[ship_num]
                         if ship['health'] == 0:
                             error = 'ERROR: That ship is sunk!'
                             continue
+                        move_direction = Utils.num_input('Which direction do you want to move it?', 'Up', 'Down', 'Left', 'Right')
                         error = ''
                         try:
                             if move_direction < 2:  # Up or down.
